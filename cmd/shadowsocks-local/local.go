@@ -18,6 +18,7 @@ import (
 	"time"
 
 	ss "github.com/shadowsocks/shadowsocks-go/shadowsocks"
+	"github.com/VividCortex/godaemon"
 )
 
 var debug ss.DebugLog
@@ -258,8 +259,9 @@ func connectToServer(serverId int, rawaddr []byte, addr string) (remote *ss.Conn
 func createServerConn(rawaddr []byte, addr string) (remote *ss.Conn, err error) {
 	const baseFailCnt = 20
 	n := len(servers.srvCipher)
+	start := rand.Intn(n)
 	skipped := make([]int, 0)
-	for i := 0; i < n; i++ {
+	for i := start; i < n; i++ {
 		// skip failed server, but try it with some probability
 		if servers.failCnt[i] > 0 && rand.Intn(servers.failCnt[i]+baseFailCnt) != 0 {
 			skipped = append(skipped, i)
@@ -407,8 +409,10 @@ func main() {
 	var configFile, cmdServer, cmdURI string
 	var cmdConfig ss.Config
 	var printVer bool
+	var daemonRun bool
 
 	flag.BoolVar(&printVer, "version", false, "print version")
+	flag.BoolVar(&daemonRun, "daemon", false, "run as daemon")
 	flag.StringVar(&configFile, "c", "config.json", "specify config file")
 	flag.StringVar(&cmdServer, "s", "", "server address")
 	flag.StringVar(&cmdConfig.LocalAddress, "b", "", "local address, listen only to this address if specified")
@@ -433,6 +437,10 @@ func main() {
 	if printVer {
 		ss.PrintVersion()
 		os.Exit(0)
+	}
+
+	if daemonRun {
+		godaemon.MakeDaemon(&godaemon.DaemonAttr{})
 	}
 
 	cmdConfig.Server = cmdServer

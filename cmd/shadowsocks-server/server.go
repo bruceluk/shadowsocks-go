@@ -20,6 +20,7 @@ import (
 	"time"
 
 	ss "github.com/shadowsocks/shadowsocks-go/shadowsocks"
+	"github.com/VividCortex/godaemon"
 )
 
 const (
@@ -432,8 +433,10 @@ func main() {
 	var cmdConfig ss.Config
 	var printVer bool
 	var core int
+	var daemonRun bool
 
 	flag.BoolVar(&printVer, "version", false, "print version")
+        flag.BoolVar(&daemonRun, "daemon", false, "run as daemon")
 	flag.StringVar(&configFile, "c", "config.json", "specify config file")
 	flag.StringVar(&cmdConfig.Password, "k", "", "password")
 	flag.IntVar(&cmdConfig.ServerPort, "p", 0, "server port")
@@ -449,6 +452,10 @@ func main() {
 	if printVer {
 		ss.PrintVersion()
 		os.Exit(0)
+	}
+
+	if daemonRun {
+		godaemon.MakeDaemon(&godaemon.DaemonAttr{})
 	}
 
 	ss.SetDebug(debug)
