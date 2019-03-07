@@ -19,7 +19,7 @@ import (
 	"syscall"
 	"time"
 
-	ss "github.com/shadowsocks/shadowsocks-go/shadowsocks"
+	ss "github.com/bruceluk/shadowsocks-go/shadowsocks"
 	"github.com/VividCortex/godaemon"
 )
 
