@@ -493,7 +493,7 @@ func main() {
 			portStr := strconv.Itoa(port)
 			password := config.Password
 			password = strings.Replace(password, "[port]", portStr, -1)
-			go run(portStr, password, false)
+			go run(portStr, password, true)
 			if udp {
 				go runUDP(portStr, password)
 			}

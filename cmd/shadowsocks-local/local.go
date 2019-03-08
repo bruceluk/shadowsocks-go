@@ -201,8 +201,10 @@ func parseServerConfig(config *ss.Config) {
 		cipherCache := make(map[string]*ss.Cipher)
 		i := 0
 		for port := config.ServerPortStart; port <= config.ServerPortEnd; port++ {
-			server := config.ServerAddress + ":" + strconv.Itoa(port)
+			portStr := strconv.Itoa(port)
+			server := config.ServerAddress + ":" + portStr
 			passwd := config.Password
+			passwd = strings.Replace(passwd, "[port]", portStr, -1)
 			encmethod := config.Method
 			cacheKey := encmethod + "|" + passwd
 			cipher, ok := cipherCache[cacheKey]
