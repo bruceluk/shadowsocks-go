@@ -17,8 +17,8 @@ import (
 	"strings"
 	"time"
 
-	ss "github.com/bruceluk/shadowsocks-go/shadowsocks"
 	"github.com/VividCortex/godaemon"
+	ss "github.com/bruceluk/shadowsocks-go/shadowsocks"
 )
 
 var debug ss.DebugLog
@@ -174,7 +174,7 @@ func parseServerConfig(config *ss.Config) {
 		return port != ""
 	}
 
-	if len(config.ServerPassword) == 0 {
+	if config.ServerPort != 0 {
 		// only one encryption table
 		cipher, err := ss.NewCipher(config.Method, config.Password)
 		if err != nil {
@@ -192,6 +192,30 @@ func parseServerConfig(config *ss.Config) {
 			} else {
 				servers.srvCipher[i] = &ServerCipher{net.JoinHostPort(s, srvPort), cipher}
 			}
+		}
+	} else if config.ServerPortStart < config.ServerPortEnd {
+		// multiple servers
+		n := config.ServerPortEnd - config.ServerPortStart + 1
+		servers.srvCipher = make([]*ServerCipher, n)
+
+		cipherCache := make(map[string]*ss.Cipher)
+		i := 0
+		for port := config.ServerPortStart; port <= config.ServerPortEnd; port++ {
+			server := config.ServerAddress + ":" + strconv.Itoa(port)
+			passwd := config.Password
+			encmethod := config.Method
+			cacheKey := encmethod + "|" + passwd
+			cipher, ok := cipherCache[cacheKey]
+			if !ok {
+				var err error
+				cipher, err = ss.NewCipher(encmethod, passwd)
+				if err != nil {
+					log.Fatal("Failed generating ciphers:", err)
+				}
+				cipherCache[cacheKey] = cipher
+			}
+			servers.srvCipher[i] = &ServerCipher{server, cipher}
+			i++
 		}
 	} else {
 		// multiple servers
@@ -348,7 +372,8 @@ func run(listenAddr string) {
 }
 
 func enoughOptions(config *ss.Config) bool {
-	return config.Server != nil && config.ServerPort != 0 &&
+	return ((config.Server != nil && config.ServerPort != 0) ||
+		(config.ServerAddress != "" && config.ServerPortStart < config.ServerPortEnd)) &&
 		config.LocalPort != 0 && config.Password != ""
 }
 

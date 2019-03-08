@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+
 	// "log"
 	"os"
 	"reflect"
@@ -18,12 +19,15 @@ import (
 )
 
 type Config struct {
-	Server       interface{} `json:"server"`
-	ServerPort   int         `json:"server_port"`
-	LocalPort    int         `json:"local_port"`
-	LocalAddress string      `json:"local_address"`
-	Password     string      `json:"password"`
-	Method       string      `json:"method"` // encryption method
+	Server          interface{} `json:"server"`
+	ServerPort      int         `json:"server_port"`
+	LocalPort       int         `json:"local_port"`
+	LocalAddress    string      `json:"local_address"`
+	Password        string      `json:"password"`
+	Method          string      `json:"method"` // encryption method
+	ServerAddress   string      `json:"server_address"`
+	ServerPortStart int         `json:"server_port_start"`
+	ServerPortEnd   int         `json:"server_port_end"`
 
 	// following options are only used by server
 	PortPassword map[string]string `json:"port_password"`

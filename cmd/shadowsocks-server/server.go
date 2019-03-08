@@ -19,8 +19,8 @@ import (
 	"syscall"
 	"time"
 
-	ss "github.com/bruceluk/shadowsocks-go/shadowsocks"
 	"github.com/VividCortex/godaemon"
+	ss "github.com/bruceluk/shadowsocks-go/shadowsocks"
 )
 
 const (
@@ -281,7 +281,7 @@ func (pm *PasswdManager) updatePortPasswd(port, password string) {
 	}
 	// run will add the new port listener to passwdManager.
 	// So there maybe concurrent access to passwdManager and we need lock to protect it.
-	go run(port, password)
+	go run(port, password, true)
 	if udp {
 		pl, ok := pm.getUDP(port)
 		if !ok {
@@ -344,11 +344,13 @@ func waitSignal() {
 	}
 }
 
-func run(port, password string) {
+func run(port, password string, failExit bool) {
 	ln, err := net.Listen("tcp", ":"+port)
 	if err != nil {
 		log.Printf("error listening port %v: %v\n", port, err)
-		os.Exit(1)
+		if failExit {
+			os.Exit(1)
+		}
 	}
 	passwdManager.add(port, password, ln)
 	var cipher *ss.Cipher
@@ -405,7 +407,7 @@ func runUDP(port, password string) {
 }
 
 func enoughOptions(config *ss.Config) bool {
-	return config.ServerPort != 0 && config.Password != ""
+	return (config.ServerPort != 0 || config.ServerPortStart < config.ServerPortEnd) && config.Password != ""
 }
 
 func unifyPortPassword(config *ss.Config) (err error) {
@@ -436,7 +438,7 @@ func main() {
 	var daemonRun bool
 
 	flag.BoolVar(&printVer, "version", false, "print version")
-        flag.BoolVar(&daemonRun, "daemon", false, "run as daemon")
+	flag.BoolVar(&daemonRun, "daemon", false, "run as daemon")
 	flag.StringVar(&configFile, "c", "config.json", "specify config file")
 	flag.StringVar(&cmdConfig.Password, "k", "", "password")
 	flag.IntVar(&cmdConfig.ServerPort, "p", 0, "server port")
@@ -485,8 +487,24 @@ func main() {
 	if core > 0 {
 		runtime.GOMAXPROCS(core)
 	}
+
+	if config.ServerPortStart < config.ServerPortEnd {
+		for port := config.ServerPortStart; port <= config.ServerPortEnd; port++ {
+			portStr := strconv.Itoa(port)
+			password := config.Password
+			password = strings.Replace(password, "[port]", portStr, -1)
+			go run(portStr, password, false)
+			if udp {
+				go runUDP(portStr, password)
+			}
+		}
+	}
+
 	for port, password := range config.PortPassword {
-		go run(port, password)
+		if port == "0" {
+			break
+		}
+		go run(port, password, true)
 		if udp {
 			go runUDP(port, password)
 		}
