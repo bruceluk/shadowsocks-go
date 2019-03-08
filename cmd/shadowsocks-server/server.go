@@ -351,6 +351,7 @@ func run(port, password string, failExit bool) {
 		if failExit {
 			os.Exit(1)
 		}
+		return
 	}
 	passwdManager.add(port, password, ln)
 	var cipher *ss.Cipher
