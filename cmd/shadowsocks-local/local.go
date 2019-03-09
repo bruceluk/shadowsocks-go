@@ -17,7 +17,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/VividCortex/godaemon"
 	ss "github.com/bruceluk/shadowsocks-go/shadowsocks"
 )
 
@@ -467,7 +466,7 @@ func main() {
 	}
 
 	if daemonRun {
-		godaemon.MakeDaemon(&godaemon.DaemonAttr{})
+		daemon()
 	}
 
 	cmdConfig.Server = cmdServer
