@@ -1,0 +1,8 @@
+{
+	"server_port_start": 50000,
+        "server_port_end": 50500,
+	"password":"1111[port]2222",
+        "method": "chacha20",
+        "timeout": 600
+}
+

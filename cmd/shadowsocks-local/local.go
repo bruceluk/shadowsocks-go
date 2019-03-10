@@ -226,32 +226,70 @@ func parseServerConfig(config *ss.Config) {
 		cipherCache := make(map[string]*ss.Cipher)
 		i := 0
 		for _, serverInfo := range config.ServerPassword {
-			if len(serverInfo) < 2 || len(serverInfo) > 3 {
+			slen := len(serverInfo)
+			if slen == 2 || slen == 3 {
+				server := serverInfo[0]
+				passwd := serverInfo[1]
+				encmethod := config.Method
+				if slen == 3 {
+					encmethod = serverInfo[2]
+				}
+				if !hasPort(server) {
+					log.Fatalf("no port for server %s\n", server)
+				}
+				// Using "|" as delimiter is safe here, since no encryption
+				// method contains it in the name.
+				cacheKey := encmethod + "|" + passwd
+				cipher, ok := cipherCache[cacheKey]
+				if !ok {
+					var err error
+					cipher, err = ss.NewCipher(encmethod, passwd)
+					if err != nil {
+						log.Fatal("Failed generating ciphers:", err)
+					}
+					cipherCache[cacheKey] = cipher
+				}
+				servers.srvCipher[i] = &ServerCipher{server, cipher}
+				i++
+			} else if slen == 5 {
+				serverIP := serverInfo[0]
+				passwd := serverInfo[1]
+				encmethod := serverInfo[2]
+				portStart, err := strconv.Atoi(serverInfo[3])
+				if err != nil {
+					log.Fatal("Failed parse port start:", err)
+				}
+				portEnd, err := strconv.Atoi(serverInfo[4])
+				if err != nil {
+					log.Fatal("Failed parse port end:", err)
+				}
+
+				count := portEnd - portStart + 1
+				oldsrvCipher := servers.srvCipher
+				servers.srvCipher = make([]*ServerCipher, i+count)
+				copy(servers.srvCipher, oldsrvCipher)
+
+				cipherCache := make(map[string]*ss.Cipher)
+				for port := portStart; port <= portEnd; port++ {
+					portStr := strconv.Itoa(port)
+					server := serverIP + ":" + portStr
+					apasswd := strings.Replace(passwd, "[port]", portStr, -1)
+					cacheKey := encmethod + "|" + apasswd
+					cipher, ok := cipherCache[cacheKey]
+					if !ok {
+						var err error
+						cipher, err = ss.NewCipher(encmethod, apasswd)
+						if err != nil {
+							log.Fatal("Failed generating ciphers:", err)
+						}
+						cipherCache[cacheKey] = cipher
+					}
+					servers.srvCipher[i] = &ServerCipher{server, cipher}
+					i++
+				}
+			} else {
 				log.Fatalf("server %v syntax error\n", serverInfo)
 			}
-			server := serverInfo[0]
-			passwd := serverInfo[1]
-			encmethod := ""
-			if len(serverInfo) == 3 {
-				encmethod = serverInfo[2]
-			}
-			if !hasPort(server) {
-				log.Fatalf("no port for server %s\n", server)
-			}
-			// Using "|" as delimiter is safe here, since no encryption
-			// method contains it in the name.
-			cacheKey := encmethod + "|" + passwd
-			cipher, ok := cipherCache[cacheKey]
-			if !ok {
-				var err error
-				cipher, err = ss.NewCipher(encmethod, passwd)
-				if err != nil {
-					log.Fatal("Failed generating ciphers:", err)
-				}
-				cipherCache[cacheKey] = cipher
-			}
-			servers.srvCipher[i] = &ServerCipher{server, cipher}
-			i++
 		}
 	}
 	servers.failCnt = make([]int, len(servers.srvCipher))
